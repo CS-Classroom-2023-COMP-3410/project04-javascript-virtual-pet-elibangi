@@ -8,32 +8,46 @@ let energy = 100;
 let health = 100;
 let money = 0;
 
+// cat gif img
 const cat = document.getElementById("cat");
+
+// stat bars
 const healthBar = document.getElementById("health-bar");
 const hungerBar = document.getElementById("hunger-bar");
 const energyBar = document.getElementById("energy-bar");
 const happyBar = document.getElementById("happiness-bar");
+
+// action btns
 const feedBtn = document.getElementById("feed");
 const playBtn = document.getElementById("play");
 const sleepBtn = document.getElementById("sleep");
+
+// alert btn
 const closeBtn = document.getElementById("close-button");
+
+// sitter btns
 const sitter1h = document.getElementById("sitter-1h");
 const sitter6h = document.getElementById("sitter-6h");
 const sitter12h = document.getElementById("sitter-12h");
 
-
+// current mood
 const moodText = document.getElementById("mood-text");
+
+// total amount of $$
 const totalAmmt = document.getElementById("ammt");
 
+// initializing the interval that updates all the recurring fcts
 let mainInterval; 
+
+// flags
 let isSleeping = false;
 let isEating = false;
 let isPlaying = false;
 let isDead = false;
-let currentTimeout = null;
+
 let isLocked = false; 
 let isMeowing = false;
-
+let currentTimeout = null;
 let sleepInterval = null;
 
 let sitterActive = false;
@@ -41,6 +55,7 @@ let sitterEndTime = 0;
 let sitterStartTime = 0;
 
 
+// saving all the current var states
 function saveCatState() {
     localStorage.setItem("hunger", hunger);
     localStorage.setItem("happiness", happiness);
@@ -54,6 +69,7 @@ function saveCatState() {
     localStorage.setItem("sitterStartTime", sitterStartTime);
 }
 
+// loading back those vars w/ saved vals
 function loadCatState() {
     if (localStorage.getItem("hunger") !== null) {
         hunger = Number(localStorage.getItem("hunger"));
@@ -65,17 +81,20 @@ function loadCatState() {
         isDead = localStorage.getItem("isDead") == "1";
         sitterActive = localStorage.getItem("sitterActive") === "1";
         sitterEndTime = Number(localStorage.getItem("sitterEndTime")) || 0;
+        sitterStartTime = Number(localStorage.getItem("sitterStartTime")) || 0;
     }
 }
 
+// restarting the game states for when cat dies
 function resetCat() {
     isDead = false;
     sitterActive = false;
     updateAlertBtn();
     localStorage.clear();
-    location.reload();
+    location.reload(); // reloads current webpage
 }
 
+// for displaying alert msg
 function showAlert(icon, title, msg) {
     document.getElementById("alert-icon").textContent = icon;
     document.getElementById("alert-title").textContent = title;
@@ -86,6 +105,7 @@ function showAlert(icon, title, msg) {
 
 }
 
+// the alert button behavior dynamically changes based on bool states
 function updateAlertBtn () {
     if (isDead) {
         closeBtn.textContent = "Restart";
@@ -107,20 +127,32 @@ function updateAlertBtn () {
 }
 
 // localStorage.clear();
+
+// loading back everything in from saved session
 window.onload = function () {
+
     loadCatState();
 
+    // remembering to set death scene even if user reloads page
     if (isDead) {
         triggerDeath();
         return;
     }
 
-    if (isSleeping) {
-        startSleep(true);
-    }
+    // the tracker of main functs
     mainInterval = setInterval(() => {
+
         if (sitterActive) {
-            sitterMode();
+            // keep track of hrs left (dividing ms by 3.6 mil shows hrs) then round up
+            const hoursLeft = Math.max(0, Math.ceil((sitterEndTime - Date.now()) / 3600000));
+            // makes sure to show this again when user comes back to page (if they enabled sitter)
+            showAlert("₍^. .^₎⟆", "Pet Sitter Hired", `Your cat will be cared for for ${hoursLeft} hour(s).`);
+
+            updateAlertBtn(); // gotta make sure we get the correct btn text
+
+            sitterMode(); //activate sitter mode
+
+            // stat bars updating while on sitter mode
             updateBar(happiness, happyBar);
             updateBar(energy, energyBar);
             updateBar(hunger, hungerBar);
@@ -128,14 +160,25 @@ window.onload = function () {
             return;
         }
 
+        // stat bar updating normally
         updateBar(happiness, happyBar);
         updateBar(energy, energyBar);
         updateBar(hunger, hungerBar);
         updateBar(health, healthBar);
+
+        //calculating health
         updateHealth();
+
+        //seeing if we need cat meow for when stats are low
         catMeowUpdate();
+
+        // update money count
         updateMoneyDisplay();
+
+        //update mood count
         moodDisplay();
+
+        // automatically stop sleeping if fully energized
         if (energy >= 100) {
             stopSleep();
         }
@@ -163,6 +206,7 @@ const gifDuration = {
     meowing: 3000
 }
 
+//updating bar val based on percentage (+ color change on break points)
 function updateBar(barStats, bar) {
     const percentage = ((barStats/maxStats) * 100);
     bar.style.width = percentage + "%";
@@ -176,22 +220,28 @@ function updateBar(barStats, bar) {
     }
 }
 
+// changing cat gif
 function changeImage(action) {
+    // don't do anything if any of those states are true
     if (isLocked && action != "sleep") return;
 
+    // clear timeout
     if (currentTimeout) {
         clearTimeout(currentTimeout);
         currentTimeout = null;
     }
 
+    // cleanly resets gif to first frame
     cat.src = catGifs[action] + "?t=" + Date.now();
 
-
+    // time eating and playing anim
     if (action == "eating" || action == "cute") {
 
         isLocked = true;
         setTimeout(() => {
             isLocked = false;
+
+            // go back to either meowing or happy anim
             if (!isMeowing) {
               cat.src = catGifs.happy;  
             }
@@ -206,6 +256,7 @@ function changeImage(action) {
     }
 }
 
+
 function updateHealth() {
     let change = 0;
 
@@ -213,6 +264,7 @@ function updateHealth() {
     if (hunger < 5) {
         change -= 0.5; 
         happiness = Math.max(0, happiness - 0.25);
+        energy = Math.max(0, energy - 0.20);
     } else if (hunger < 15) {
         change -= 0.25; 
     } else if (hunger < 30) {
@@ -257,6 +309,7 @@ function updateHealth() {
     }
 }
 
+// death scene :((
 function triggerDeath() {
     isDead = true;
     updateAlertBtn();
@@ -278,6 +331,7 @@ function triggerDeath() {
     
 }
 
+// deducts money if possible, sets alert, starts the sitter timer
 function hireSitter(hours, cost) {
     if (money < cost) {
         showAlert("⚠", "Not Enough Money", "You can't afford a pet sitter.")
@@ -286,11 +340,13 @@ function hireSitter(hours, cost) {
 
     money -= cost;
     sitterActive = true;
+
     sitterEndTime = Date.now() + (hours * 60 * 60 * 1000);
     saveCatState();
     showAlert("₍^. .^₎⟆", "Pet Sitter Hired", `Your cat will be cared for for ${hours} hour(s).`);
 }
 
+// activate sitter mode B)
 function sitterMode() {
     const now = Date.now();
 
@@ -300,12 +356,13 @@ function sitterMode() {
     }
 
     //  incrementing stats while sitter is active
-    hunger = Math.min(100, hunger + 0.05);
-    happiness = Math.min(100, happiness + 0.05);
-    energy = Math.min(100, energy + 0.05);
-    health = Math.min(100, health + 0.05);
+    hunger = Math.min(100, hunger + 0.1);
+    happiness = Math.min(100, happiness + 0.1);
+    energy = Math.min(100, energy + 0.1);
+    health = Math.min(100, health + 0.1);
 }
 
+// for ending the sitter mode after timer ends
 function endSitter() {
     sitterActive = false;
 
@@ -315,11 +372,12 @@ function endSitter() {
     health = Math.min(100, health + 40);
 
     updateAlertBtn();
-    showAlert("⌂", "Your Cat Is Back!", "The sitter took great care of your cat.");
+    showAlert("^-^", "Your Cat Is Back!", "The sitter took great care of your cat.");
 
     saveCatState();
 }
 
+// to allow player to go back to game from sitter mode
 function returnCatEarly() {
     if (!sitterActive) return;
 
@@ -338,11 +396,12 @@ function returnCatEarly() {
     sitterActive = false;
 
     updateAlertBtn(); // button becomes "Close"
-    showAlert("⌂", "Your Cat Came Home Early", "They were happy to see you!");
+    showAlert("^-^", "Your Cat Came Home Early", "They were happy to see you!");
 
     saveCatState();
 }
 
+// cat meows if stats are low
 function catMeowUpdate() {
     const shouldMeow = (hunger < 30 || energy < 25 || happiness < 25);
     if (shouldMeow && !isMeowing) {
@@ -357,9 +416,9 @@ function catMeowUpdate() {
 }
 
 
-
+// appends moods and needs
 function getMood() {
-    let tags = [];
+    let tags = []; // holds the mood txts
 
     //hunger
     if (hunger < 15)  {
@@ -406,10 +465,12 @@ function getMood() {
 
 }
 
+
 function moodDisplay() {
     moodText.textContent = getMood();
 }
 
+// sleeping logic
 function startSleep() {
     if (isSleeping) return;
     isSleeping = true;
@@ -425,12 +486,15 @@ function startSleep() {
     sitter1h.disabled = true;
     sitter6h.disabled = true;
     sitter12h.disabled = true;
-
+    
+    // automatically stop sleeping if energized
     if (energy >= 100) {
         stopSleep();
     }
+
 }
 
+// ending sleep
 function stopSleep() {
     if (!isSleeping) return;
     feedBtn.disabled = false;
@@ -446,6 +510,7 @@ function stopSleep() {
 
 }
 
+// snaturally decaying stats
 const hungerInterval = setInterval(function() {
     if (hunger > 0) {
         hunger -= 1;
@@ -464,6 +529,8 @@ const energyInterval = setInterval(function() {
     }
 }, 30000);
 
+
+// incrementing money on timely basis (as long as happy or content)
 let getMoney = setInterval(() => {
     const mood = getMood();
 
@@ -472,10 +539,13 @@ let getMoney = setInterval(() => {
 
 }, 10000);
 
+
+// gotta show that cash
 function updateMoneyDisplay() {
     totalAmmt.innerText = money;
 }
 
+// action clicks
 feedBtn.onclick = function() {
     if (isEating) return;
     if (hunger >= 100) return;
@@ -529,6 +599,8 @@ sleepBtn.onclick = function() {
     }
     
 }
+
+// sitter clicks
 
 sitter1h.onclick = () => {
     hireSitter(1, 50);

@@ -13,6 +13,7 @@ button {
     font-size: 1em;
     box-shadow: 5px 5px 5px grey;
     transition: all 0.3s ease-in-out;
+    cursor: pointer;
 }
 
 .button-container {
@@ -134,35 +135,23 @@ button:hover{
   word-wrap: break-word;
   overflow-wrap: break-word;
 }
+
 #content {
   background-color: #ffffff;
   margin: 5rem auto;
   padding: 2rem;
   border: 1px solid #888;
   width: 25rem;
-  height: 15rem;
-  box-shadow: 5px 5px 5px  rgba(0,0,0,0.5);
+  height: 17rem;
+  padding-bottom: 1rem;
+  box-shadow: 5px 5px 5px rgba(0,0,0,0.5);
 }
-
-#close-button {
-  color: #000000;
-  font-size: 28px;
-  font-weight: bold;
-  cursor: pointer;
-  margin-bottom: 1rem;
-  transition: all .2s ease-in-out; 
-}
-
-#close-wrap {
-    text-align: right;
-    margin-top: 1rem;
-}
-
 
 #close-button {
     background-color: lightgray;
     font-size: 15px;
     font-weight: normal;
+    cursor: pointer;
 }
 
 #close-button:hover {
@@ -177,7 +166,6 @@ button:hover{
     justify-content: center;
     align-items: center;
     flex-direction: column;
-
     opacity: 0;
     pointer-events: none;
 
