@@ -515,19 +515,19 @@ const hungerInterval = setInterval(function() {
     if (hunger > 0) {
         hunger -= 1;
     }
-}, 20000);
+}, 5000);
 
 const happyInterval = setInterval(function() {
     if (happiness > 0) {
         happiness -= 1;
     }
-}, 25000);
+}, 10000);
 
 const energyInterval = setInterval(function() {
     if (energy > 0) {
         energy -= 1 ;
     }
-}, 30000);
+}, 15000);
 
 
 // incrementing money on timely basis (as long as happy or content)
@@ -600,8 +600,7 @@ sleepBtn.onclick = function() {
     
 }
 
-// sitter clicks
-
+//sitter clicks
 sitter1h.onclick = () => {
     hireSitter(1, 50);
 };
