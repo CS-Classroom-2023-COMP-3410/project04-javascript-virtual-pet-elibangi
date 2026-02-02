@@ -16,14 +16,134 @@ const happyBar = document.getElementById("happiness-bar");
 const feedBtn = document.getElementById("feed");
 const playBtn = document.getElementById("play");
 const sleepBtn = document.getElementById("sleep");
+const closeBtn = document.getElementById("close-button");
+const sitter1h = document.getElementById("sitter-1h");
+const sitter6h = document.getElementById("sitter-6h");
+const sitter12h = document.getElementById("sitter-12h");
+
 
 const moodText = document.getElementById("mood-text");
+const totalAmmt = document.getElementById("ammt");
 
+let mainInterval; 
 let isSleeping = false;
 let isEating = false;
 let isPlaying = false;
+let isDead = false;
 let currentTimeout = null;
 let isLocked = false; 
+let isMeowing = false;
+
+let sleepInterval = null;
+
+let sitterActive = false;
+let sitterEndTime = 0;
+let sitterStartTime = 0;
+
+
+function saveCatState() {
+    localStorage.setItem("hunger", hunger);
+    localStorage.setItem("happiness", happiness);
+    localStorage.setItem("energy", energy);
+    localStorage.setItem("health", health);
+    localStorage.setItem("money", money);
+    localStorage.setItem("isSleeping", isSleeping ? "1" : "0");
+    localStorage.setItem("isDead", isDead ? "1" : "0");
+    localStorage.setItem("sitterActive", sitterActive ? "1" : "0");
+    localStorage.setItem("sitterEndTime", sitterEndTime);
+    localStorage.setItem("sitterStartTime", sitterStartTime);
+}
+
+function loadCatState() {
+    if (localStorage.getItem("hunger") !== null) {
+        hunger = Number(localStorage.getItem("hunger"));
+        happiness = Number(localStorage.getItem("happiness"));
+        energy = Number(localStorage.getItem("energy"));
+        health = Number(localStorage.getItem("health"));
+        money = Number(localStorage.getItem("money"));
+        isSleeping = localStorage.getItem("isSleeping") == "1";
+        isDead = localStorage.getItem("isDead") == "1";
+        sitterActive = localStorage.getItem("sitterActive") === "1";
+        sitterEndTime = Number(localStorage.getItem("sitterEndTime")) || 0;
+    }
+}
+
+function resetCat() {
+    isDead = false;
+    sitterActive = false;
+    updateAlertBtn();
+    localStorage.clear();
+    location.reload();
+}
+
+function showAlert(icon, title, msg) {
+    document.getElementById("alert-icon").textContent = icon;
+    document.getElementById("alert-title").textContent = title;
+    document.getElementById("message").textContent = msg;
+    document.getElementById("alert-box").style.display = "flex";
+    document.getElementById("alert-box").classList.add("show");
+    updateAlertBtn();
+
+}
+
+function updateAlertBtn () {
+    if (isDead) {
+        closeBtn.textContent = "Restart";
+        closeBtn.onclick = () => resetCat();
+        return;
+    }
+
+    if (sitterActive) {
+        closeBtn.textContent = "Return Cat";
+        closeBtn.onclick = () => returnCatEarly();
+        return;
+    }
+
+    closeBtn.textContent = "Close";
+    closeBtn.onclick = () => {
+        document.getElementById("alert-box").style.display = "none";
+    };
+
+}
+
+// localStorage.clear();
+window.onload = function () {
+    loadCatState();
+
+    if (isDead) {
+        triggerDeath();
+        return;
+    }
+
+    if (isSleeping) {
+        startSleep(true);
+    }
+    mainInterval = setInterval(() => {
+        if (sitterActive) {
+            sitterMode();
+            updateBar(happiness, happyBar);
+            updateBar(energy, energyBar);
+            updateBar(hunger, hungerBar);
+            updateBar(health, healthBar);
+            return;
+        }
+
+        updateBar(happiness, happyBar);
+        updateBar(energy, energyBar);
+        updateBar(hunger, hungerBar);
+        updateBar(health, healthBar);
+        updateHealth();
+        catMeowUpdate();
+        updateMoneyDisplay();
+        moodDisplay();
+        if (energy >= 100) {
+            stopSleep();
+        }
+        saveCatState();
+    }, 250);
+
+};
+
 // gifs for different cat states
 const catGifs = {
     happy: "imgs/HappyCat.gif",
@@ -36,7 +156,7 @@ const catGifs = {
 // gotta keep track of how long these gifs last for proper animation
 const gifDuration = {
     sleeping: 3000,
-    eating: 6150,
+    eating: 6200,
     cute: 3250,
     happy: 3000,
     dead: 400,
@@ -63,16 +183,22 @@ function changeImage(action) {
         clearTimeout(currentTimeout);
         currentTimeout = null;
     }
-    cat.src = catGifs[action];
+
     cat.src = catGifs[action] + "?t=" + Date.now();
 
 
     if (action == "eating" || action == "cute") {
-        // imma keep it as happy, but will change based on bar stats
+
         isLocked = true;
         setTimeout(() => {
             isLocked = false;
-            cat.src = catGifs.happy;
+            if (!isMeowing) {
+              cat.src = catGifs.happy;  
+            }
+            else {
+                cat.src = catGifs.meowing;
+            }
+            
         }, gifDuration[action]);
         
     } else {
@@ -82,50 +208,155 @@ function changeImage(action) {
 
 function updateHealth() {
     let change = 0;
-    //hunger influence
+
+    // hunger influence
     if (hunger < 5) {
-        change -= 2;
-        happiness = Math.max(0, happiness - 1);
+        change -= 0.5; 
+        happiness = Math.max(0, happiness - 0.25);
     } else if (hunger < 15) {
-        change -= 1;
+        change -= 0.25; 
     } else if (hunger < 30) {
-        change -= 0.5;
+        change -= 0.125;
     } else if (hunger >= 60 && hunger < 80) {
-        change += 0.5;
+        change += 0.125; 
     } else if (hunger >= 80) {
-        change += 1;
+        change += 0.25; 
     }
-    //happiness influence
+
+    // happiness influence
     if (happiness < 10) {
-        change -= 1;
+        change -= 0.25; 
     } else if (happiness < 25) {
-        change -= 0.5;
+        change -= 0.125; 
     } else if (happiness >= 60 && happiness < 80) {
-        change += 0.5;
+        change += 0.125; 
     } else if (happiness >= 80) {
-        change += 1;
+        change += 0.25; 
     }
 
-    //energy influence
+    // energy influence
     if (energy < 5) {
-        change -= 2;
-        happiness = Math.max(0, happiness - 1);
-
+        change -= 0.5; 
+        happiness = Math.max(0, happiness - 0.25); 
     } else if (energy < 15) {
-        change -= 1;
+        change -= 0.25; 
     } else if (energy < 25) {
-        change -= 0.5;
+        change -= 0.125;
     } else if (energy >= 60 && energy < 80) {
-        change += 0.5;
+        change += 0.125; 
     } else if (energy >= 80) {
-        change += 1;
+        change += 0.25; 
     }
 
+    // apply change
     health = Math.max(0, Math.min(100, health + change));
+
+    // detect death
+    if (health <= 0 && !isDead) {
+        triggerDeath();
+    }
+}
+
+function triggerDeath() {
+    isDead = true;
+    updateAlertBtn();
+    clearInterval(sleepInterval);
+    clearInterval(mainInterval);
+
+    feedBtn.disabled = true;
+    playBtn.disabled = true;
+    sleepBtn.disabled = true;
+    sitter1h.disabled = true;
+    sitter6h.disabled = true;
+    sitter12h.disabled = true;
+
+    changeImage("dead");
+    document.getElementById("death-screen").classList.add("show");
+    setTimeout(() => {
+        showAlert(":,(", "Your Cat Has Died", "It seems you have forgotten to take care of your cat. Restart to adopt a new one."); 
+    }, 10000);
+    
+}
+
+function hireSitter(hours, cost) {
+    if (money < cost) {
+        showAlert("⚠", "Not Enough Money", "You can't afford a pet sitter.")
+        return; 
+    }
+
+    money -= cost;
+    sitterActive = true;
+    sitterEndTime = Date.now() + (hours * 60 * 60 * 1000);
+    saveCatState();
+    showAlert("₍^. .^₎⟆", "Pet Sitter Hired", `Your cat will be cared for for ${hours} hour(s).`);
+}
+
+function sitterMode() {
+    const now = Date.now();
+
+    if (now >= sitterEndTime) {
+        endSitter()
+        return;
+    }
+
+    //  incrementing stats while sitter is active
+    hunger = Math.min(100, hunger + 0.05);
+    happiness = Math.min(100, happiness + 0.05);
+    energy = Math.min(100, energy + 0.05);
+    health = Math.min(100, health + 0.05);
+}
+
+function endSitter() {
+    sitterActive = false;
+
+    hunger = Math.min(100, hunger + 40);
+    happiness = Math.min(100, happiness + 40);
+    energy = Math.min(100, energy + 50);
+    health = Math.min(100, health + 40);
+
+    updateAlertBtn();
+    showAlert("⌂", "Your Cat Is Back!", "The sitter took great care of your cat.");
+
+    saveCatState();
+}
+
+function returnCatEarly() {
+    if (!sitterActive) return;
+
+    const now = Date.now();
+    const total = sitterEndTime - sitterStartTime;
+    const elapsed = now - sitterStartTime;
+
+    const pct = Math.min(1, elapsed / total);
+
+    // partial benefits
+    hunger = Math.min(100, hunger + 40 * pct);
+    happiness = Math.min(100, happiness + 40 * pct);
+    energy = Math.min(100, energy + 50 * pct);
+    health = Math.min(100, health + 40 * pct);
+
+    sitterActive = false;
+
+    updateAlertBtn(); // button becomes "Close"
+    showAlert("⌂", "Your Cat Came Home Early", "They were happy to see you!");
+
+    saveCatState();
+}
+
+function catMeowUpdate() {
+    const shouldMeow = (hunger < 30 || energy < 25 || happiness < 25);
+    if (shouldMeow && !isMeowing) {
+            isMeowing = true;
+            changeImage("meowing");
+        }
+
+    if (!shouldMeow && isMeowing) {
+        isMeowing = false;
+        changeImage("happy");
+    }
 }
 
 
-let sleepInterval = null;
 
 function getMood() {
     let tags = [];
@@ -191,7 +422,9 @@ function startSleep() {
 
     feedBtn.disabled = true;
     playBtn.disabled = true;
-
+    sitter1h.disabled = true;
+    sitter6h.disabled = true;
+    sitter12h.disabled = true;
 
     if (energy >= 100) {
         stopSleep();
@@ -202,6 +435,9 @@ function stopSleep() {
     if (!isSleeping) return;
     feedBtn.disabled = false;
     playBtn.disabled = false;
+    sitter1h.disabled = false;
+    sitter6h.disabled = false;
+    sitter12h.disabled = false;
     isSleeping = false;
     clearInterval(sleepInterval);
     sleepInterval = null;
@@ -214,48 +450,49 @@ const hungerInterval = setInterval(function() {
     if (hunger > 0) {
         hunger -= 1;
     }
-}, 15000);
+}, 20000);
 
 const happyInterval = setInterval(function() {
     if (happiness > 0) {
         happiness -= 1;
     }
-}, 20000);
+}, 25000);
 
 const energyInterval = setInterval(function() {
     if (energy > 0) {
         energy -= 1 ;
     }
-}, 25000);
+}, 30000);
 
-setInterval(() => {
-    updateBar(happiness, happyBar);
-    updateBar(energy, energyBar);
-    updateBar(hunger, hungerBar);
-    updateBar(health, healthBar);
-    moodDisplay();
-    console.log(health);
-    if (energy >= 100) {
-        stopSleep();
-    }
+let getMoney = setInterval(() => {
+    const mood = getMood();
 
-}, 250);
+    if (mood.startsWith("happy")) money += 2;
+    else if (mood.startsWith("content")) money += 1;
 
-let trackHealth = setInterval (() => {
-    updateHealth();
-}, 1000);
+}, 10000);
+
+function updateMoneyDisplay() {
+    totalAmmt.innerText = money;
+}
 
 feedBtn.onclick = function() {
     if (isEating) return;
     if (hunger >= 100) return;
     playBtn.disabled = true;
     sleepBtn.disabled = true;
+    sitter1h.disabled = true;
+    sitter6h.disabled = true;
+    sitter12h.disabled = true;
     isEating = true;
     changeImage("eating");
     hunger = Math.min(100, hunger + 25);
     setTimeout(() => {
         playBtn.disabled = false;
         sleepBtn.disabled = false;
+        sitter1h.disabled = false;
+        sitter6h.disabled = false;
+        sitter12h.disabled = false;
         isEating = false;
     }, gifDuration.eating);
     
@@ -266,6 +503,9 @@ playBtn.onclick = function() {
     if (happiness >= 100) return;
     feedBtn.disabled = true;
     sleepBtn.disabled = true;
+    sitter1h.disabled = true;
+    sitter6h.disabled = true;
+    sitter12h.disabled = true;
     isPlaying = true;
     changeImage("cute"); 
     happiness = Math.min(100, happiness + 25);
@@ -274,6 +514,9 @@ playBtn.onclick = function() {
     setTimeout(() => {
         feedBtn.disabled = false;
         sleepBtn.disabled = false;
+        sitter1h.disabled = false;
+        sitter6h.disabled = false;
+        sitter12h.disabled = false;
         isPlaying = false;
     }, gifDuration.cute);
     
@@ -286,6 +529,19 @@ sleepBtn.onclick = function() {
     }
     
 }
+
+sitter1h.onclick = () => {
+    hireSitter(1, 50);
+};
+
+sitter6h.onclick = () => {
+    hireSitter(6, 300);
+};
+
+sitter12h.onclick = () => {
+    hireSitter(12, 600);
+};
+
 
 
 

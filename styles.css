@@ -127,7 +127,6 @@ button:hover{
   overflow-wrap: break-word;
   font-size: 18px;
   padding: 10px;
-  margin: auto;
   z-index: 2;
   text-align: left;
 }
@@ -147,12 +146,18 @@ button:hover{
 
 #close-button {
   color: #000000;
-  float: right;
   font-size: 28px;
   font-weight: bold;
   cursor: pointer;
+  margin-bottom: 1rem;
   transition: all .2s ease-in-out; 
 }
+
+#close-wrap {
+    text-align: right;
+    margin-top: 1rem;
+}
+
 
 #close-button {
     background-color: lightgray;
@@ -162,4 +167,24 @@ button:hover{
 
 #close-button:hover {
     background-color: darkgrey;
+}
+
+#death-screen {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.75);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+
+    opacity: 0;
+    pointer-events: none;
+
+    transition: opacity 10s ease;
+}
+
+#death-screen.show {
+    opacity: 1;
+    pointer-events: auto;
 }
